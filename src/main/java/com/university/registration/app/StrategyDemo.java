@@ -19,165 +19,126 @@ import com.university.registration.waitlist.SeatAllocator;
 import com.university.registration.waitlist.SeniorityFirst;
 import com.university.registration.waitlist.WaitlistPolicy;
 import com.university.registration.waitlist.WaitlistPolicySelector;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Random;
 import java.util.Scanner;
-import java.util.stream.Collectors;
 
-public final class StrategyDemo {
+public class StrategyDemo {
 
-    private static final Student ARUZHAN = new Student("S1", "Aruzhan", false, 30);
-    private static final Student DIAS = new Student("S2", "Dias", false, 95);
-    private static final Student MEHMET = new Student("S3", "Mehmet", true, 60);
-    private static final Student SOFIA = new Student("S4", "Sofia", false, 12);
-    private static final Student TIMUR = new Student("S5", "Timur", false, 110);
+    static Student aruzhan = new Student("S1", "Aruzhan", false, 30);
+    static Student dias = new Student("S2", "Dias", false, 95);
+    static Student mehmet = new Student("S3", "Mehmet", true, 60);
+    static Student sofia = new Student("S4", "Sofia", false, 12);
+    static Student timur = new Student("S5", "Timur", false, 110);
 
-    private static final List<WaitlistEntry> WAITLIST = List.of(
-            entry(SOFIA, 8, 5),
-            entry(DIAS, 9, 40),
-            entry(ARUZHAN, 8, 30),
-            entry(TIMUR, 10, 15),
-            entry(MEHMET, 9, 0));
+    static List<WaitlistEntry> waitlist = List.of(
+            entry(sofia, 8, 5),
+            entry(dias, 9, 40),
+            entry(aruzhan, 8, 30),
+            entry(timur, 10, 15),
+            entry(mehmet, 9, 0));
 
-    private final ExchangeRateSource rates;
-    private final Random random;
-    private final List<TuitionPricing> pricings;
-    private final List<WaitlistPolicy> policies;
-
-    StrategyDemo(ExchangeRateSource rates, Random random) {
-        this.rates = rates;
-        this.random = random;
-        this.pricings = List.of(new PerCreditPricing(), new FlatSemesterPricing(), new InternationalPricing(rates));
-        this.policies = List.of(new FirstComeFirstServed(), new SeniorityFirst(), new LotteryPolicy(random));
-    }
+    static Random random = new Random();
+    static ExchangeRateSource rates = new SimulatedExchangeRateSource();
+    static List<TuitionPricing> pricings = List.of(
+            new PerCreditPricing(), new FlatSemesterPricing(), new InternationalPricing(rates));
+    static List<WaitlistPolicy> policies = List.of(
+            new FirstComeFirstServed(), new SeniorityFirst(), new LotteryPolicy(random));
 
     public static void main(String[] args) {
-        StrategyDemo demo = new StrategyDemo(new SimulatedExchangeRateSource(), new Random());
-        if (args.length > 0 && args[0].equals("--all")) {
-            demo.runAll();
-            return;
-        }
-        demo.menu(new Scanner(System.in));
-    }
-
-    private void menu(Scanner in) {
+        Scanner in = new Scanner(System.in);
         while (true) {
             System.out.println();
-            System.out.println("=== University Registration: Strategy demo ===");
-            System.out.println("1) Same input through every strategy");
-            System.out.println("2) Manual choice vs Selector");
-            System.out.println("3) Switch strategy at runtime");
-            System.out.println("4) Run all");
-            System.out.println("0) Exit");
-            System.out.print("> ");
+            System.out.println("1 - All strategies");
+            System.out.println("2 - Manual vs selector");
+            System.out.println("3 - Change strategy");
+            System.out.println("0 - Exit");
+            System.out.print("Choose: ");
             if (!in.hasNextLine()) {
                 return;
             }
-            switch (in.nextLine().trim()) {
-                case "1" -> sameInputThroughEveryStrategy();
-                case "2" -> manualVersusSelector();
-                case "3" -> switchAtRuntime();
-                case "4" -> runAll();
-                case "0" -> {
-                    return;
-                }
-                default -> System.out.println("Unknown option");
+            String choice = in.nextLine().trim();
+            if (choice.equals("1")) {
+                allStrategies();
+            } else if (choice.equals("2")) {
+                manualVsSelector();
+            } else if (choice.equals("3")) {
+                changeStrategy();
+            } else if (choice.equals("0")) {
+                return;
+            } else {
+                System.out.println("Wrong choice");
             }
         }
     }
 
-    void runAll() {
-        sameInputThroughEveryStrategy();
-        manualVersusSelector();
-        switchAtRuntime();
-    }
-
-    void sameInputThroughEveryStrategy() {
-        header("1. Same input through every strategy");
-        Enrollment enrollment = new Enrollment(ARUZHAN, 15);
-        System.out.println("Tuition for " + describe(enrollment) + ":");
+    static void allStrategies() {
+        Enrollment enrollment = new Enrollment(aruzhan, 15);
+        System.out.println("Aruzhan, 15 credits:");
         for (TuitionPricing pricing : pricings) {
-            System.out.printf("  %-22s %s%n", pricing.name(), money(pricing.tuitionFor(enrollment)));
+            System.out.println("  " + pricing.name() + ": " + pricing.tuitionFor(enrollment) + " KZT");
         }
 
-        System.out.println();
-        System.out.println("2 free seats, waitlist: " + names(WAITLIST));
-        SeatAllocator allocator = new SeatAllocator(policies.get(0));
+        System.out.println("Waitlist " + names(waitlist) + ", 2 free seats:");
         for (WaitlistPolicy policy : policies) {
-            allocator.setStrategy(policy);
-            System.out.printf("  %-26s admits %s%n", policy.name(), names(allocator.admit(2, WAITLIST)));
+            System.out.println("  " + policy.name() + ": " + names(new SeatAllocator(policy).admit(2, waitlist)));
         }
     }
 
-    void manualVersusSelector() {
-        header("2. Manual choice vs Selector");
+    static void manualVsSelector() {
         TuitionCalculator manual = new TuitionCalculator(new PerCreditPricing());
         PricingSelector selector = new PricingSelector(rates);
-        System.out.printf("  %-28s %-24s %-22s %s%n", "Enrollment", "Manual: Per credit", "Selector picks", "Auto price");
-        for (Enrollment enrollment : List.of(
-                new Enrollment(ARUZHAN, 9),
-                new Enrollment(DIAS, 18),
-                new Enrollment(MEHMET, 15))) {
-            TuitionCalculator auto = new TuitionCalculator(selector.select(enrollment));
-            System.out.printf("  %-28s %-24s %-22s %s%n", describe(enrollment), money(manual.quote(enrollment)),
-                    auto.strategy().name(), money(auto.quote(enrollment)));
+        List<Enrollment> enrollments = List.of(
+                new Enrollment(aruzhan, 9), new Enrollment(dias, 18), new Enrollment(mehmet, 15));
+        for (Enrollment e : enrollments) {
+            TuitionPricing chosen = selector.select(e);
+            System.out.println(e.student().name() + ", " + e.credits() + " credits:");
+            System.out.println("  manual (Per credit): " + manual.quote(e) + " KZT");
+            System.out.println("  selector (" + chosen.name() + "): " + chosen.tuitionFor(e) + " KZT");
         }
 
-        System.out.println();
         SeatAllocator manualSeats = new SeatAllocator(new FirstComeFirstServed());
         WaitlistPolicySelector policySelector = new WaitlistPolicySelector(random);
-        for (AllocationSituation situation : List.of(
-                new AllocationSituation(RegistrationPhase.PRIORITY, 2, WAITLIST.size()),
-                new AllocationSituation(RegistrationPhase.OPEN, 1, WAITLIST.size()),
-                new AllocationSituation(RegistrationPhase.ADD_DROP, 2, WAITLIST.size()))) {
-            SeatAllocator auto = new SeatAllocator(policySelector.select(situation));
-            System.out.printf("  %-9s %d seat(s) | manual FCFS -> %-18s | selector: %-24s -> %s%n",
-                    situation.phase(), situation.freeSeats(),
-                    names(manualSeats.admit(situation.freeSeats(), WAITLIST)),
-                    auto.strategy().name(), names(auto.admit(situation.freeSeats(), WAITLIST)));
+        List<AllocationSituation> situations = List.of(
+                new AllocationSituation(RegistrationPhase.PRIORITY, 2, waitlist.size()),
+                new AllocationSituation(RegistrationPhase.OPEN, 1, waitlist.size()),
+                new AllocationSituation(RegistrationPhase.ADD_DROP, 2, waitlist.size()));
+        for (AllocationSituation s : situations) {
+            WaitlistPolicy chosen = policySelector.select(s);
+            System.out.println(s.phase() + ", " + s.freeSeats() + " free seats:");
+            System.out.println("  manual (First come, first served): " + names(manualSeats.admit(s.freeSeats(), waitlist)));
+            System.out.println("  selector (" + chosen.name() + "): " + names(new SeatAllocator(chosen).admit(s.freeSeats(), waitlist)));
         }
     }
 
-    void switchAtRuntime() {
-        header("3. Switch strategy at runtime");
-        Enrollment enrollment = new Enrollment(MEHMET, 12);
+    static void changeStrategy() {
+        Enrollment enrollment = new Enrollment(mehmet, 12);
         TuitionCalculator calculator = new TuitionCalculator(pricings.get(0));
-        System.out.println("One TuitionCalculator, " + describe(enrollment) + ":");
+        System.out.println("Mehmet, 12 credits:");
         for (TuitionPricing pricing : pricings) {
             calculator.setStrategy(pricing);
-            System.out.printf("  setStrategy(%s) -> %s%n", pricing.name(), money(calculator.quote(enrollment)));
+            System.out.println("  " + pricing.name() + ": " + calculator.quote(enrollment) + " KZT");
         }
 
-        System.out.println("One SeatAllocator, 3 free seats:");
         SeatAllocator allocator = new SeatAllocator(policies.get(0));
+        System.out.println("3 free seats:");
         for (WaitlistPolicy policy : policies) {
             allocator.setStrategy(policy);
-            System.out.printf("  setStrategy(%s) -> %s%n", policy.name(), names(allocator.admit(3, WAITLIST)));
+            System.out.println("  " + policy.name() + ": " + names(allocator.admit(3, waitlist)));
         }
     }
 
-    private static WaitlistEntry entry(Student student, int hour, int minute) {
+    static WaitlistEntry entry(Student student, int hour, int minute) {
         return new WaitlistEntry(student, LocalDateTime.of(2026, 8, 20, hour, minute));
     }
 
-    private static void header(String title) {
-        System.out.println();
-        System.out.println("--- " + title + " ---");
-    }
-
-    private static String describe(Enrollment enrollment) {
-        Student s = enrollment.student();
-        return s.name() + (s.international() ? " (intl)" : "") + ", " + enrollment.credits() + " cr";
-    }
-
-    private static String money(BigDecimal amount) {
-        return String.format(Locale.ROOT, "%,d KZT", amount.longValueExact());
-    }
-
-    private static String names(List<WaitlistEntry> entries) {
-        return entries.stream().map(e -> e.student().name()).collect(Collectors.joining(", ", "[", "]"));
+    static List<String> names(List<WaitlistEntry> entries) {
+        List<String> result = new ArrayList<>();
+        for (WaitlistEntry e : entries) {
+            result.add(e.student().name());
+        }
+        return result;
     }
 }

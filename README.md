@@ -22,9 +22,8 @@ You need JDK 17 or newer. Maven is included (`mvnw`).
 ```bash
 ./mvnw test
 ./mvnw -q compile exec:java
-./mvnw -q compile exec:java -Dexec.args="--all"
 ```
-1st line runs the 44 tests. 2nd opens the menu. 3rd prints every demo section without the menu.
+1st line runs the 44 tests. 2nd opens the menu.
 
 ## Project structure
 
