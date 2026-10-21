@@ -104,8 +104,8 @@ Selector rules:
 
 ## Refactoring commits (pricing family)
 
-- **Before:** [`0376c80`](https://github.com/ab1xae/sdp_staregy-pattern/commit/0376c80c74d2accc9f313172cf1c5cc85da4f17b): all three prices in one class with `switch`.
-- **After:** [`2607751`](https://github.com/ab1xae/sdp_staregy-pattern/commit/2607751b55514676ac28cc892bbc30ae9611a0f6): one interface plus three strategy classes.
+- **Before:** [`dc9541d`](https://github.com/ab1xae/sdp_staregy-pattern/commit/dc9541d8ff2cde4b575601358577f2932be00b03): all three prices in one class with `switch`.
+- **After:** [`08e2abc`](https://github.com/ab1xae/sdp_staregy-pattern/commit/08e2abc6897eabf7cd882cbb4c96e4a79f3d46c3): one interface plus three strategy classes.
 
 `TuitionCalculatorTest` is the same file in both commits, and it passes on both.
 
